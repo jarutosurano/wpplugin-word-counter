@@ -6,16 +6,24 @@
  * Version: 1.0.0
  * Author: jarutosurano
  * Author URI: https://jarutosurano.io
- * Text Domain: word-counter
+ * Text Domain: cwcdomain
+ * Domain Path: /languages
  */
 
 class CallMeWordCounter
 {
     function __construct()
     {
+        add_action('init', [$this, 'loadTextDomain']); // Load the text domain for translation
         add_action("admin_menu", [$this, "adminPage"]); // Add menu page for the plugin
         add_action("admin_init", [$this, "settings"]); // Register settings on admin initialization
-        add_filter('the_content', [$this, "ifWrap"]); //
+        add_filter('the_content', [$this, "ifWrap"]); // Filter the content to add word statistics
+    }
+
+    // Load the plugin text domain
+    function loadTextDomain()
+    {
+        load_plugin_textdomain('cwcdomain', false, dirname(plugin_basename(__FILE__)) . '/languages');
     }
 
     function ifWrap($content)
@@ -31,11 +39,10 @@ class CallMeWordCounter
         return $content;
     }
 
-
     function createHTML($content)
     {
         // Add headline with proper escaping for security
-        $html = '<h3>' . esc_html(get_option('cwc_headline', 'Post Statistics')) . '</h3><p>';
+        $html = '<h3>' . esc_html(get_option('cwc_headline', esc_html__('Post Statistics', 'cwcdomain'))) . '</h3><p>';
 
         // Get word count once (removing HTML tags)
         if (get_option('cwc_wordcount', '1') || get_option('cwc_readtime', '1')) {
@@ -44,19 +51,19 @@ class CallMeWordCounter
 
         // Add word count if enabled
         if (get_option('cwc_wordcount', '1')) {
-            $html .= 'This post has ' . $wordCount . ' words.<br>';
+            $html .= esc_html__('This post has ', 'cwcdomain') . esc_html($wordCount) . esc_html__(' words.', 'cwcdomain') . '<br>';
         }
 
         // Add character count if enabled
         if (get_option('cwc_charcount', '1')) {
-            $html .= 'This post has ' . strlen(strip_tags($content)) . ' characters.<br>';
+            $html .= esc_html__('This post has ', 'cwcdomain') . esc_html(strlen(strip_tags($content))) . esc_html__(' characters.', 'cwcdomain') . '<br>';
         }
 
         // Calculate and add read time if enabled
         if (get_option('cwc_readtime', '1')) {
             $readTime = round($wordCount / 255); // Average reading speed
-            $readTimeText = ($readTime < 1) ? '1 minute' : $readTime . ' ' . ($readTime > 1 ? 'minutes' : 'minute');
-            $html .= 'This post will take about ' . $readTimeText . ' to read.<br>';
+            $readTimeText = ($readTime < 1) ? esc_html__('1 minute', 'cwcdomain') : esc_html($readTime) . ' ' . ($readTime > 1 ? esc_html__('minutes', 'cwcdomain') : esc_html__('minute', 'cwcdomain'));
+            $html .= esc_html__('This post will take about ', 'cwcdomain') . esc_html($readTimeText) . esc_html__(' to read.', 'cwcdomain') . '<br>';
         }
 
         // Close the paragraph tag
@@ -82,7 +89,7 @@ class CallMeWordCounter
         // Register field to set display location (beginning/end of post)
         add_settings_field(
             "cwc_location",
-            "Display Location",
+            esc_html__("Display Location", 'cwcdomain'),
             [$this, "locationHTML"],
             "callme-wordcounter",
             "cwc_first_section"
@@ -95,20 +102,20 @@ class CallMeWordCounter
         // Register field for headline text
         add_settings_field(
             "cwc_headline",
-            "Headline Text",
+            esc_html__("Headline Text", 'cwcdomain'),
             [$this, "headlineHTML"],
             "callme-wordcounter",
             "cwc_first_section"
         );
         register_setting("callmewordcountergroup", "cwc_headline", [
             "sanitize_callback" => "sanitize_text_field", // Sanitize input
-            "default" => "Post Statistics",
+            "default" => esc_html__("Post Statistics", 'cwcdomain'),
         ]);
 
         // Register checkbox for word count visibility
         add_settings_field(
             "cwc_wordcount",
-            "Word Count",
+            esc_html__("Word Count", 'cwcdomain'),
             [$this, "checkboxHTML"],
             "callme-wordcounter",
             "cwc_first_section",
@@ -122,7 +129,7 @@ class CallMeWordCounter
         // Register checkbox for character count visibility
         add_settings_field(
             "cwc_charcount",
-            "Character Count",
+            esc_html__("Character Count", 'cwcdomain'),
             [$this, "checkboxHTML"],
             "callme-wordcounter",
             "cwc_first_section",
@@ -136,7 +143,7 @@ class CallMeWordCounter
         // Register checkbox for read time visibility
         add_settings_field(
             "cwc_readtime",
-            "Read Time",
+            esc_html__("Read Time", 'cwcdomain'),
             [$this, "checkboxHTML"],
             "callme-wordcounter",
             "cwc_first_section",
@@ -154,7 +161,7 @@ class CallMeWordCounter
             add_settings_error(
                 "cwc_location",
                 "cwc_location_error",
-                "Display location must be either beginning or end."
+                esc_html__("Display location must be either beginning or end.", 'cwcdomain')
             );
             return get_option("cwc_location");
         }
@@ -188,10 +195,10 @@ class CallMeWordCounter
         <select name="cwc_location">
             <option value="0" <?php selected(
                 get_option("cwc_location", "0")
-            ); ?>>Beginning of Post</option>
+            ); ?>><?php esc_html_e('Beginning of Post', 'cwcdomain'); ?></option>
             <option value="1" <?php selected(
                 get_option("cwc_location", "1")
-            ); ?>>End of Post</option>
+            ); ?>><?php esc_html_e('End of Post', 'cwcdomain'); ?></option>
         </select>
         <?php
     }
@@ -200,8 +207,8 @@ class CallMeWordCounter
     function adminPage()
     {
         add_options_page(
-            "Word Count Settings", // Page title
-            "Word Count", // Menu title
+            esc_html__("Word Count Settings", 'cwcdomain'), // Page title
+            esc_html__("Word Count", 'cwcdomain'), // Menu title
             "manage_options", // Capability required
             "callme-wordcounter", // Menu slug
             [$this, "ourHTML"] // Function to display page content
@@ -213,12 +220,12 @@ class CallMeWordCounter
     {
         ?>
         <div class="wrap">
-            <h1>Word Count Settings</h1>
+            <h1><?php esc_html_e('Word Count Settings', 'cwcdomain'); ?></h1>
             <form action="options.php" method="POST">
                 <?php
                 settings_fields("callmewordcountergroup"); // Output necessary hidden fields for settings submission
                 do_settings_sections("callme-wordcounter"); // Output the settings sections
-                submit_button();// Submit button
+                submit_button(); // Submit button
                 ?>
             </form>
         </div>
